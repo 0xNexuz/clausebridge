@@ -56,3 +56,61 @@ Append-only record of milestones (M), issues (I) and questions (Q).
 - **Screens:** `docs/screens/`. Captured from a local copy loaded with the live run's suggestions unchanged; the seed refused to load unless the contract text length, clause count and every quote position matched the live run. The report summary is Ling's wording from the live run, replayed through ClauseBridge's own validation; figures were filled in from the local copy, which mirrors the live state.
 - **Test data on the live database:** accounts `live6t44ib`, `tobip2f3`, `tobiqnkx` and `dbgoilj`, each with its own private workspace and the fictional samples. The owner can delete them.
 - **Open:** `ANT_LING_API_KEY` is set for Production only, so preview deployments run without AI. Ling's summary wording is checked for figures but not for meaning; people still read it before approving.
+
+## M-006 — Audit and debugging pass (7 November 2026)
+- **Request (owner):** audit and debug ClauseBridge.
+- **How:** a full review of the server, parsers, report check, Univer screens and API, reproducing each problem before fixing it (failing test, request or browser run). Browser runs used the local stand-in model, not Ling output. Branch `fix/clausebridge-audit` from `a120170`.
+- **Issues found and fixed:** I-002 to I-010 below.
+- **Checks:** `npm test` 23/23 (9 new tests, each failing on the old code); `npm run typecheck` clean; `npm run build` passes; `npm run test:postgres` passes on PostgreSQL 16. A two-connection race script on PostgreSQL (`scratchpad/audit/pgrace.mjs`) was run before and after the fix: see I-007.
+- **Checked and sound:** workspace privacy (9 cross-workspace attempts, all "not found"); the same-origin write check; HTML/SVG evidence refused; downloads served as attachments with `nosniff` (evidence also sandboxed); a double confirmation on SQLite returns 409; calendar token checks; no horizontal overflow at 390 px on 8 screens; no console errors.
+- **Open (found, not fixed):**
+  - Long contracts on Vercel: each 9,000-character chunk may take two attempts of up to 55 s, one after another, under a 60 s limit, so contracts over one or two chunks may time out. Not reproduced.
+  - Parser cases left for a person: "within ten (14) days" uses 14; "1st of March 2027" and "USD5000" are not read; "the 2026 USD budget" reads as USD 2,026.00.
+  - Abuse limits:
+    - Anyone who knows a username can lock it out for 15 minutes.
+    - Throttles are per user and per server instance, and registration is open, so the shared Ant Ling allowance can be used up by new accounts.
+    - Sign-in has no per-IP limit.
+  - Small gaps: no frame-blocking header; contract downloads lack the sandbox CSP that evidence has; `ORDER BY ref` misorders past OB-999; a draft from an earlier day must be redrafted before approval.
+
+## I-002 — Report check let a changed figure pass (7 November 2026)
+- Any value equal to some current fact was accepted anywhere. "1 are done" → "4 are done", swapped counts, another payment's amount, another obligation's date, "Not started" → "Done", or "3 percent" all passed.
+- **Fix:** each inserted figure and status must stay where ClauseBridge put it, with the same neighbouring word on each side (linking words such as is/are are ignored). The report screen lists such figures.
+- **Behaviour change:** typing a current figure into your own sentence is now flagged.
+
+## I-003 — Request bodies buffered before the size check (7 November 2026)
+- An unauthenticated 300 MB chunked body reached 1.2 GB of server memory before being refused.
+- **Fix:** bodies and uploads are read with a streaming limit; memory stayed at about 290 MB. Vercel's 4.5 MB request cap already limited this on the hosted site.
+
+## I-004 — Two dates or amounts in a clause marked high confidence (7 November 2026)
+- When Ling picked one of two dates or amounts in a clause, the term was marked high confidence. It is now marked "check carefully" with the reason; Ling's choice stays pre-filled.
+
+## I-005 — Amounts read from part of a number (7 November 2026)
+- "EUR 1.234,56" was read as EUR 1.23, "USD 4,500.555" as 4,500.55, and "$1,2345" as $1,234.
+- **Fix:** such amounts are not read; a person enters them.
+
+## I-006 — Edit form dropped a worked-out due date (7 November 2026)
+- Editing only the title of a suggestion whose date was worked out from the effective date saved the obligation with no due date.
+- **Fix:** the form follows the suggestion's date.
+
+## I-007 — Races on PostgreSQL (7 November 2026)
+- **Before the fix**, on PostgreSQL 16 with two connections:
+  - 6 of 8 parallel confirmations failed with a duplicate `OB-` number (500 errors);
+  - two edits with the same version both succeeded, so the first was lost;
+  - one report was approved twice.
+- **Fix:** the version and status checks moved into each UPDATE, with a row-count check, and the reference number is incremented before it is read.
+- **After the fix:** a double confirmation returns 409; 8 parallel confirmations all succeed with unique references; the second same-version edit and the second approval return 409.
+
+## I-008 — Control characters hid contract text (7 November 2026)
+- A `.txt` containing `\x1A` made a clause vanish from the Univer Docs view.
+- **Fix:** control characters are shown as spaces, which keeps quote positions exact and also fixes contracts already stored. Uploads are cleaned too.
+
+## I-009 — Calendar feed line injection (7 November 2026)
+- A lone carriage return in an obligation title could add lines to other members' calendar feeds. It is now escaped, and other control characters are removed.
+
+## I-010 — Smaller fixes (7 November 2026)
+- Timestamps showed the UTC date with the local time.
+- A JSON number for "paid" was read as cents.
+- A payment recorded without a date used the server's UTC date instead of the person's.
+- `?limit=abc` on the audit API and a `null` JSON body caused 500 errors.
+- The obligation drawer did not take keyboard focus.
+- Five controls had no label.

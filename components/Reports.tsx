@@ -44,7 +44,7 @@ export default function Reports({ ctx, reportId }: { ctx: AppContext; reportId: 
       <section className="card" style={{ marginBottom: 16 }}>
         <h2>Prepare a report</h2>
         <div className="row">
-          <select className="input" value={scope} onChange={e => setScope(e.target.value)}>
+          <select className="input" aria-label="Contracts to report on" value={scope} onChange={e => setScope(e.target.value)}>
             <option value="">All contracts in {ctx.workspace.name}</option>
             {ctx.data.contracts.filter(c => c.obligations > 0).map(c => <option key={c.id} value={c.id}>{c.title}</option>)}
           </select>
@@ -166,11 +166,12 @@ function ReportDetail({ ctx, reportId, onChanged }: { ctx: AppContext; reportId:
             <section className="card">
               <h2>{check.ok ? 'Figures check out' : 'Figures need attention'}</h2>
               <p className="hint" style={{ marginTop: 0 }}>{check.verified} figure{check.verified === 1 ? '' : 's'} match current records.</p>
-              {(check.changed.length > 0 || check.missing.length > 0 || check.unverified.length > 0) && (
+              {(check.changed.length > 0 || check.missing.length > 0 || check.unverified.length > 0 || check.moved.length > 0) && (
                 <ul className="check-list">
                   {check.changed.map(c => <li key={c.token}>{c.label} was <b>{c.was}</b>, now <b>{c.now}</b></li>)}
                   {check.missing.map(c => <li key={c.token}><b>{c.was}</b> is no longer tracked</li>)}
                   {check.unverified.map(u => <li key={u.value}><b>{u.value}</b> isn’t a ClauseBridge figure: “{u.context}”</li>)}
+                  {check.moved.map((m, i) => <li key={`moved-${i}`}><b>{m.value}</b> isn’t where ClauseBridge put it, or the words beside it changed: “{m.context}”</li>)}
                 </ul>
               )}
             </section>

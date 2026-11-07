@@ -182,6 +182,8 @@ export type ReportCheck = {
   changed: { token: string; label: string; was: string; now: string }[];
   missing: { token: string; was: string }[];
   unverified: { value: string; context: string }[];
+  /** ClauseBridge figures that are no longer where ClauseBridge put them, or whose neighbouring words changed. */
+  moved: { value: string; context: string }[];
 };
 
 function escape(value: string) { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
@@ -195,11 +197,60 @@ function contextAround(source: string, index: number, length: number) {
   return `${start > 0 ? '…' : ''}${source.slice(start, end).replace(/\s+/g, ' ').trim()}${end < source.length ? '…' : ''}`;
 }
 
+/** The report text as the editor shows it: one line per block (see mountReport in lib/univer-docs.ts). */
+export function draftText(blocks: Block[]) {
+  return blocks.map(block => block.segments.map(segment => segment.text.replace(/[\r\n]+/g, ' ').replace(/[\x00-\x08\x0B-\x1F\x7F]/g, ' ')).join('')).join('\n');
+}
+
+// Words that carry no meaning next to a figure, so "1 are done" may be corrected to "1 is done".
+const LINK_WORDS = new Set(['a', 'an', 'the', 'is', 'are', 'was', 'were', 'be', 'been', 'has', 'have', 'had']);
+const STATUS_TEXTS = Object.values(STATUS_LABEL);
+
 /**
- * Compares the report text with current facts. Figures ClauseBridge inserted must still match; any other
- * number, amount or date in the text must be a current fact, an obligation reference or a clause label.
+ * Every figure in `text`, keyed by its value and the nearest word or figure on each side within its line.
+ * Names (which may contain digits) count as words, never as figures.
  */
-export function checkReport(reportText: string, refs: { token: string; text: string }[], facts: Map<string, Fact>, allowedPhrases: string[]): ReportCheck {
+function figuresIn(text: string, figures: string[], names: string[]) {
+  const candidates = [...figures.map(value => ({ value, figure: true, pattern: whole(value) })),
+    ...names.map(value => ({ value, figure: false, pattern: whole(value) }))].sort((a, b) => b.value.length - a.value.length);
+  const found: { value: string; key: string; index: number; length: number }[] = [];
+  let offset = 0;
+  for (const line of text.split('\n')) {
+    const spans: { start: number; end: number; token: string; figure: boolean }[] = [];
+    for (const candidate of candidates) {
+      if (!line.includes(candidate.value)) continue;
+      for (const match of line.matchAll(candidate.pattern)) {
+        const start = match.index!;
+        const end = start + match[0].length;
+        if (!spans.some(span => start < span.end && end > span.start)) spans.push({ start, end, token: candidate.figure ? match[0] : match[0].toLowerCase(), figure: candidate.figure });
+      }
+    }
+    const tokens = [...spans];
+    for (const match of line.matchAll(/\p{L}[\p{L}\p{N}'’-]*/gu)) {
+      const start = match.index!;
+      const word = match[0].toLowerCase();
+      if (!LINK_WORDS.has(word) && !spans.some(span => start < span.end && start + match[0].length > span.start)) tokens.push({ start, end: start + match[0].length, token: word, figure: false });
+    }
+    tokens.sort((a, b) => a.start - b.start);
+    tokens.forEach((token, index) => {
+      if (!token.figure) return;
+      const before = tokens[index - 1]?.token ?? '^';
+      const after = tokens[index + 1]?.token ?? '$';
+      found.push({ value: token.token, key: `${token.token}\u0000${before}\u0000${after}`, index: offset + token.start, length: token.end - token.start });
+    });
+    offset += line.length + 1;
+  }
+  return found;
+}
+
+/**
+ * Compares the edited report text with the draft ClauseBridge wrote and with current facts. Figures
+ * ClauseBridge inserted must still match current records and stay where ClauseBridge put them, between the
+ * same words; a figure typed elsewhere (even one that equals some other current fact) is flagged. Any other
+ * number, amount or date in the text is flagged too.
+ */
+export function checkReport(reportText: string, blocks: Block[], facts: Map<string, Fact>, allowedPhrases: string[]): ReportCheck {
+  const refs = draftFacts(blocks);
   const changed: ReportCheck['changed'] = [];
   const missing: ReportCheck['missing'] = [];
   let verified = 0;
@@ -224,7 +275,19 @@ export function checkReport(reportText: string, refs: { token: string; text: str
     if (!unverified.some(item => item.value === match[0])) unverified.push({ value: match[0], context: contextAround(reportText, match.index!, match[0].length) });
     if (unverified.length >= 20) break;
   }
-  return { ok: verified > 0 && !changed.length && !missing.length && !unverified.length, verified, changed, missing, unverified };
+
+  // Each figure must sit where the draft put it: same value, same neighbouring word or figure on each side.
+  const figures = [...new Set([...[...facts.values()].map(item => item.text), ...refs.map(ref => ref.text)].filter(value => /\d/.test(value)).concat(STATUS_TEXTS))];
+  const names = [...new Set(allowedPhrases.filter(name => name.trim() && !figures.includes(name)))];
+  const available = new Map<string, number>();
+  for (const item of figuresIn(draftText(blocks), figures, names)) available.set(item.key, (available.get(item.key) ?? 0) + 1);
+  const moved: ReportCheck['moved'] = [];
+  for (const item of figuresIn(reportText, figures, names)) {
+    const left = available.get(item.key) ?? 0;
+    if (left > 0) { available.set(item.key, left - 1); continue; }
+    if (moved.length < 20) moved.push({ value: item.value, context: contextAround(reportText, item.index, item.length) });
+  }
+  return { ok: verified > 0 && !changed.length && !missing.length && !unverified.length && !moved.length, verified, changed, missing, unverified, moved };
 }
 
 /** After approval: which approved facts have since changed. */

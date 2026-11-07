@@ -1,3 +1,4 @@
+import { formDataLimited } from '@/lib/server/files';
 import { body, json } from '@/lib/server/http';
 import { isId, workspaceRoute } from '@/lib/server/route';
 import { MAX_EVIDENCE_BYTES, StoreError } from '@/lib/server/store';
@@ -11,8 +12,7 @@ const ALLOWED_TYPES = /^(application\/pdf|image\/(png|jpeg|webp|gif)|text\/plain
 export const POST = workspaceRoute<{ ws: string; oid: string }>(async (request, { store, user, workspaceId }, { oid }) => {
   if (!isId(oid)) throw new StoreError('not_found', 'Obligation not found');
   if (request.headers.get('content-type')?.startsWith('multipart/form-data')) {
-    if (Number(request.headers.get('content-length') ?? 0) > MAX_EVIDENCE_BYTES + 64_000) throw new StoreError('invalid', 'Evidence files can be up to 3 MB');
-    const form = await request.formData();
+    const form = await formDataLimited(request, MAX_EVIDENCE_BYTES + 64_000, 'Evidence files can be up to 3 MB');
     const file = form.get('file');
     if (!file || typeof file === 'string') throw new StoreError('invalid', 'Choose a file');
     if (file.size > MAX_EVIDENCE_BYTES) throw new StoreError('invalid', 'Evidence files can be up to 3 MB');

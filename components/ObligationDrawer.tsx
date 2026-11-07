@@ -20,6 +20,7 @@ export default function ObligationDrawer({ ctx, obligationId, onClose }: { ctx: 
   const [note, setNote] = useState('');
   const [paid, setPaid] = useState('');
   const fileInput = useRef<HTMLInputElement>(null);
+  const panel = useRef<HTMLElement>(null);
   const base = `/api/w/${ctx.workspace.id}/obligations/${obligationId}`;
 
   const load = useCallback(async () => {
@@ -30,6 +31,12 @@ export default function ObligationDrawer({ ctx, obligationId, onClose }: { ctx: 
     } catch (e) { setError(errorText(e)); }
   }, [base]);
   useEffect(() => { void load(); }, [load]);
+  // A modal dialog takes focus when it opens and gives it back when it closes.
+  useEffect(() => {
+    const opener = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    panel.current?.focus();
+    return () => { if (opener?.isConnected) opener.focus(); };
+  }, []);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') onClose(); };
     window.addEventListener('keydown', onKey);
@@ -66,7 +73,7 @@ export default function ObligationDrawer({ ctx, obligationId, onClose }: { ctx: 
   return (
     <>
       <div className="scrim" onClick={onClose} />
-      <aside className="drawer" role="dialog" aria-modal="true" aria-label="Obligation">
+      <aside className="drawer" role="dialog" aria-modal="true" aria-label="Obligation" ref={panel} tabIndex={-1}>
         <div className="row" style={{ justifyContent: 'space-between' }}>
           <span className="ref">{ob?.ref ?? 'Obligation'}</span>
           <button className="btn small quiet" onClick={onClose} aria-label="Close">Close</button>

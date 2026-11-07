@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { api, errorText } from '@/lib/api';
 import { formatDate, formatMoney } from '@/lib/contract/terms';
 import { KIND_LABEL, KINDS, type Kind, type Suggestion } from '@/lib/types';
@@ -19,6 +19,8 @@ export default function SuggestionCard({ ctx, suggestion: s, clauseLabel, focuse
   const [party, setParty] = useState(s.party);
   const [owner, setOwner] = useState('');
   const [due, setDue] = useState(s.due.date ?? '');
+  // The date is worked out again when someone sets the contract's effective date; keep the form in step with it.
+  useEffect(() => { setDue(s.due.date ?? ''); }, [s.due.date]);
   const [amount, setAmount] = useState(s.amount.cents !== null ? (s.amount.cents / 100).toFixed(2) : '');
   const [currency, setCurrency] = useState(s.amount.currency ?? s.amount.options[0]?.currency ?? 'USD');
   const isParty = s.kind === 'party';

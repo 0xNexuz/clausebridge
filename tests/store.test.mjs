@@ -6,6 +6,7 @@ import { migrate } from '../lib/server/schema.ts';
 import { ClauseBridgeStore } from '../lib/server/store.ts';
 import { normalizeContractText, splitClauses } from '../lib/contract/clauses.ts';
 import { groundReplies } from '../lib/server/extract.ts';
+import { readBodyLimited } from '../lib/server/files.ts';
 import { buildDashboard, paymentTotals } from '../lib/obligations.ts';
 import { obligationsCalendar } from '../lib/ics.ts';
 
@@ -136,4 +137,93 @@ test('dashboard, payment totals and calendar feed come from confirmed obligation
   assert.match(ics, /DTSTART;VALUE=DATE:20261110/);
   assert.match(ics, /TRIGGER:-PT15H/);
   assert.ok(ics.split('\r\n').every(line => Buffer.byteLength(line) <= 75));
+});
+
+test('when a clause states several dates or amounts, the one Ling picks is shown but marked for checking', () => {
+  const twoText = normalizeContractText('1. Payment\n1.1 The Client shall pay USD 2,000 on 1 March 2027 and USD 3,000 on 1 June 2027.');
+  const twoClauses = splitClauses(twoText);
+  const item = { kind: 'payment', title: 'Pay the second instalment', party: 'Client', clause: 'c2', confidence: 'high', reason: 'r',
+    quote: 'The Client shall pay USD 2,000 on 1 March 2027 and USD 3,000 on 1 June 2027', due: '2027-06-01', amount: 'USD 3,000' };
+  const [s] = groundReplies([{ items: [item] }], { text: twoText, clauses: twoClauses, effectiveDate: null, model: 'm' }).suggestions;
+  assert.equal(s.due.date, '2027-06-01', 'Ling’s choice is pre-filled');
+  assert.equal(s.amount.cents, 300000);
+  assert.ok(s.checks.some(c => c.id === 'date' && !c.ok && /2 dates/.test(c.text)));
+  assert.ok(s.checks.some(c => c.id === 'amount' && !c.ok && /2 amounts/.test(c.text)));
+  assert.equal(s.confidence, 'low', 'a choice between two contract figures needs a person');
+});
+
+// Runs `onRead` inside the same transaction right after the first read matching `pattern`, as if another
+// request had committed in between (which Postgres allows: its reads take no row lock).
+function interleaved(db, pattern, onRead) {
+  const state = { done: false };
+  const wrap = inner => ({
+    dialect: inner.dialect,
+    all: (sql, params) => inner.all(sql, params),
+    run: (sql, params) => inner.run(sql, params),
+    exec: sql => inner.exec(sql),
+    async get(sql, params) {
+      const row = await inner.get(sql, params);
+      if (!state.done && pattern.test(sql)) { state.done = true; await onRead(inner); }
+      return row;
+    },
+    tx: fn => inner.tx(t => fn(wrap(t))),
+  });
+  return new ClauseBridgeStore(wrap(db));
+}
+
+test('a change committed between the read and the write is refused, not overwritten', async () => {
+  const { store, db, amara, ws, contractId } = await setup();
+  await store.setEffectiveDate(amara.id, ws.id, contractId, '2026-11-03');
+  const { suggestions } = groundReplies([reply], { text, clauses, effectiveDate: '2026-11-03', model: 'm' });
+  await store.saveExtraction(amara.id, ws.id, contractId, suggestions, { model: 'm', requestIds: [], ranAt: '', suggested: 0, dropped: [], tokens: null, ranBy: 'amara' });
+  const pending = (await store.getContract(amara.id, ws.id, contractId)).suggestions;
+  const deposit = pending.find(s => s.title === 'Pay the deposit');
+
+  // Two people confirm the same suggestion at once: only one obligation may result.
+  const racing = interleaved(db, /FROM suggestions WHERE id = \?/, inner => inner.run("UPDATE suggestions SET status = 'confirmed' WHERE id = ?", [deposit.id]));
+  await assert.rejects(racing.decideSuggestion(amara.id, ws.id, deposit.id, { action: 'confirm', edits: {} }), /already been decided/);
+  assert.equal((await store.listObligations(amara.id, ws.id)).length, 0);
+
+  const mockups = pending.find(s => s.title === 'Deliver the design mockups');
+  const { obligationId } = await store.decideSuggestion(amara.id, ws.id, mockups.id, { action: 'confirm', edits: {} });
+  // Someone marks it blocked after this request read version 1: the stale edit must not overwrite it.
+  const editing = interleaved(db, /FROM obligations o JOIN contracts/, inner => inner.run("UPDATE obligations SET status = 'blocked', version = version + 1 WHERE id = ?", [obligationId]));
+  await assert.rejects(editing.updateObligation(amara.id, ws.id, obligationId, 1, { status: 'done' }), /Someone else changed/);
+  // (The simulated concurrent write shares this SQLite transaction, so the refusal rolls it back too.)
+  assert.equal((await store.getObligation(amara.id, ws.id, obligationId)).obligation.version, 1);
+
+  const reportId = await store.createReport(amara.id, ws.id, { contractId, title: 'R', asOf: '2026-11-07', draft: { blocks: [] }, model: null, requestId: null });
+  const approving = interleaved(db, /FROM reports WHERE id = \?/, inner => inner.run("UPDATE reports SET status = 'approved', approved_text = 'first' WHERE id = ?", [reportId]));
+  await assert.rejects(approving.approveReport(amara.id, ws.id, reportId, 'second', {}, 1), /already approved/);
+});
+
+test('a payment recorded without a date takes the caller’s date; a bad audit limit falls back', async () => {
+  const { store, amara, ws, contractId } = await setup();
+  const { suggestions } = groundReplies([reply], { text, clauses, effectiveDate: null, model: 'm' });
+  await store.saveExtraction(amara.id, ws.id, contractId, suggestions, { model: 'm', requestIds: [], ranAt: '', suggested: 0, dropped: [], tokens: null, ranBy: 'amara' });
+  const final = (await store.getContract(amara.id, ws.id, contractId)).suggestions.find(s => s.title === 'Pay the final instalment');
+  const { obligationId } = await store.decideSuggestion(amara.id, ws.id, final.id, { action: 'confirm', edits: {} });
+  const paid = await store.updateObligation(amara.id, ws.id, obligationId, 1, { paidCents: 100000 }, '2026-11-08');
+  assert.equal(paid.obligation.paidDate, '2026-11-08');
+  for (const limit of [Number.NaN, 1.5, -3, Infinity]) assert.ok((await store.listAudit(amara.id, ws.id, limit)).length >= 1);
+});
+
+test('a calendar title cannot end a line early', () => {
+  const ics = obligationsCalendar([{ id: 'x', ref: 'OB-001', title: 'Pay\rATTACH:https://evil.test/x\nnow', dueDate: '2026-11-10', status: 'open', kind: 'deadline',
+    amountCents: null, currency: null, paidCents: 0, contractTitle: 'C', clauseLabel: 'Clause 1', quote: 'q\u0007', ownerName: null }], 'https://example.test');
+  assert.ok(!/\r(?!\n)/.test(ics), 'no bare carriage return');
+  assert.ok(!ics.split('\r\n').some(line => line.startsWith('ATTACH')), 'no injected property line');
+  assert.ok(!/[\x00-\x08\x0b\x0c\x0e-\x1f]/.test(ics));
+});
+
+test('request bodies are refused once they pass the limit, without reading the rest', async () => {
+  let pulled = 0;
+  const endless = new ReadableStream({ pull(controller) { pulled++; controller.enqueue(new Uint8Array(64 * 1024)); } });
+  const chunked = new Request('http://local.test/', { method: 'POST', body: endless, duplex: 'half' });
+  await assert.rejects(readBodyLimited(chunked, 300_000), /too large/);
+  assert.ok(pulled <= 7, `stopped after ${pulled} chunks`);
+  const declared = new Request('http://local.test/', { method: 'POST', body: 'x', headers: { 'content-length': '5000000' } });
+  await assert.rejects(readBodyLimited(declared, 300_000, 'Contract files can be up to 4 MB'), /up to 4 MB/);
+  const small = new Request('http://local.test/', { method: 'POST', body: '{"a":1}' });
+  assert.equal((await readBodyLimited(small, 300_000)).toString(), '{"a":1}');
 });

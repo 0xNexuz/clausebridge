@@ -191,7 +191,8 @@ export const CURRENCIES: Record<string, string> = {
   dollars: 'USD', euros: 'EUR', pounds: 'GBP',
 };
 const SYMBOL = '(US\\$|C\\$|A\\$|GH₵|[$€£₦₵₹¥]|\\b(?:USD|EUR|GBP|NGN|CAD|AUD|KES|KSh|ZAR|GHS|INR|JPY|CHF)\\b)';
-const AMOUNT = '(\\d{1,3}(?:,\\d{3})+(?:\\.\\d{1,2})?|\\d+(?:\\.\\d{1,2})?)';
+// The number must end there: "EUR 1.234,56" or "USD 4,500.555" is not read at all rather than read as 1.23 or 4,500.55.
+const AMOUNT = '(\\d{1,3}(?:,\\d{3})+(?:\\.\\d{1,2})?|\\d+(?:\\.\\d{1,2})?)(?!\\d|[.,]\\d)';
 const SCALE = '(?:\\s*(million|thousand|m|k)\\b)?';
 const WORD_CURRENCY = '\\s+(dollars|euros|pounds|naira)\\b';
 
@@ -239,7 +240,8 @@ export function formatMoney(cents: number, currency: string) {
 
 /** Parses a person-entered amount such as "4,500" or "4500.50" into integer cents. */
 export function parseMoneyInput(value: unknown): number | null {
-  if (typeof value === 'number' && Number.isSafeInteger(value) && value >= 0) return value;
+  // A JSON number means the same as the string a person types (4500 is 4,500.00), never cents.
+  if (typeof value === 'number') value = Number.isFinite(value) ? String(value) : '';
   if (typeof value !== 'string') return null;
   const clean = value.trim().replace(/,/g, '');
   if (!/^\d{1,13}(?:\.\d{1,2})?$/.test(clean)) return null;

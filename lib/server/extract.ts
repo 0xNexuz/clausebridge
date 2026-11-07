@@ -127,7 +127,8 @@ export function groundItem(raw: Record<string, unknown>, context: Context, kindO
   if (dates.length === 1) {
     due.date = dates[0].iso; due.source = 'contract'; due.text = dates[0].text; due.ambiguous = Boolean(dates[0].ambiguous);
   } else if (dates.length > 1) {
-    if (due.options.includes(modelDate)) { due.date = modelDate; due.source = 'contract'; }
+    const chosen = dates.filter(date => date.iso === modelDate);
+    if (chosen.length) { due.date = modelDate; due.source = 'contract'; due.ambiguous = chosen.every(date => date.ambiguous); }
     due.text = dates.map(date => date.text).join(', ');
   }
   if (!dates.length) {
@@ -142,7 +143,10 @@ export function groundItem(raw: Record<string, unknown>, context: Context, kindO
   const modelDueText = str(raw.due_text, 160);
   if (!due.text && modelDueText && exact.toLowerCase().includes(modelDueText.toLowerCase())) due.text = modelDueText;
 
-  if (due.date && due.source === 'contract') {
+  if (due.date && due.source === 'contract' && due.options.length > 1) {
+    // Which of the clause's dates is the due date is a judgement: Ling's choice is shown, never trusted.
+    checks.push({ id: 'date', ok: false, text: `The clause states ${due.options.length} dates; Ling chose ${formatDate(due.date)}. Check it is the due date${due.ambiguous ? ' and the day/month order' : ''}` });
+  } else if (due.date && due.source === 'contract') {
     checks.push({ id: 'date', ok: !due.ambiguous, text: due.ambiguous
       ? `Due ${formatDate(due.date)}, read as day/month from “${due.text}”; check the order`
       : `Due ${formatDate(due.date)}, read from the clause` });
@@ -172,7 +176,9 @@ export function groundItem(raw: Record<string, unknown>, context: Context, kindO
     : amounts.find(item => modelAmount && item.cents === modelAmount.cents && item.currency === modelAmount.currency);
   if (pick) { amount.cents = pick.cents; amount.currency = pick.currency; amount.text = pick.text; amount.source = 'contract'; }
   amount.percent = /\b\d{1,3}(?:\.\d{1,2})?\s?%/.exec(exact)?.[0] ?? null;
-  if (pick) checks.push({ id: 'amount', ok: true, text: `Amount ${formatMoney(pick.cents, pick.currency)}, read from the clause` });
+  const distinctAmounts = new Set(amounts.map(item => `${item.currency} ${item.cents}`)).size;
+  if (pick && distinctAmounts > 1) checks.push({ id: 'amount', ok: false, text: `The clause states ${distinctAmounts} amounts; Ling chose ${formatMoney(pick.cents, pick.currency)}. Check it is the amount due` });
+  else if (pick) checks.push({ id: 'amount', ok: true, text: `Amount ${formatMoney(pick.cents, pick.currency)}, read from the clause` });
   else if (amounts.length > 1) checks.push({ id: 'amount', ok: false, text: `The clause states ${amounts.length} amounts; choose the right one` });
   else if (kind === 'payment') checks.push({ id: 'amount', ok: false, text: amount.percent ? `The clause gives a percentage (${amount.percent}); enter the amount` : 'The clause states no amount; enter it from the contract' });
   if (modelAmount && !amounts.some(item => item.cents === modelAmount.cents && item.currency === modelAmount.currency)) {

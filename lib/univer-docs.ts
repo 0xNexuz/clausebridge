@@ -17,6 +17,12 @@ const TONES: Record<Mark['tone'], ITextStyle> = {
 
 type StyledRange = { start: number; end: number; style: ITextStyle };
 
+/**
+ * Univer reads control characters in a data stream as document structure (\x1A starts a table, \v and \f
+ * break columns and pages), which can hide contract text. Each becomes a space, so offsets stay exact.
+ */
+const visible = (text: string) => text.replace(/[\x00-\x08\x0B-\x1F\x7F]/g, ' ');
+
 /** Merges possibly overlapping styled ranges into the non-overlapping text runs Univer expects. */
 function toRuns(ranges: StyledRange[], length: number): ITextRun[] {
   const cuts = new Set<number>([0, length]);
@@ -50,7 +56,7 @@ const SERIF = 'Source Serif 4 Variable';
 
 /** The contract as a Univer document: clause numbers in bold, headings set apart, suggestion quotes highlighted. */
 export function contractDocument(id: string, text: string, clauses: Clause[], marks: Mark[]): Partial<IDocumentData> {
-  const stream = text.replace(/\n/g, '\r') + '\r\n';
+  const stream = visible(text).replace(/\n/g, '\r') + '\r\n';
   const ranges: StyledRange[] = [{ start: 0, end: text.length, style: { ff: SERIF, fs: 11.5, cl: { rgb: '#1B1F24' } } }];
   const headingStarts = new Set<number>();
   const firstBreak = text.indexOf('\n');
@@ -128,7 +134,7 @@ export function mountReport(container: HTMLElement, blocks: Block[]): ReportView
     stream += prefix;
     for (const segment of block.segments) {
       const segStart = stream.length;
-      stream += segment.text.replace(/[\r\n]+/g, ' ');
+      stream += visible(segment.text.replace(/[\r\n]+/g, ' '));
       if (segment.type === 'fact') ranges.push({ start: segStart, end: stream.length, style: { cl: { rgb: '#145C4C' }, bg: { rgb: '#E7F3EC' } } });
     }
     if (block.kind === 'title') ranges.push({ start, end: stream.length, style: { bl: BooleanNumber.TRUE, fs: 18 } });

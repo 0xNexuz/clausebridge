@@ -1,6 +1,6 @@
 import { parseMoneyInput } from '@/lib/contract/terms';
 import { body, json } from '@/lib/server/http';
-import { isId, workspaceRoute } from '@/lib/server/route';
+import { isId, requestToday, workspaceRoute } from '@/lib/server/route';
 import { StoreError, type ObligationPatch } from '@/lib/server/store';
 import { STATUSES, type Status } from '@/lib/types';
 
@@ -34,5 +34,5 @@ export const PATCH = workspaceRoute<P>(async (request, { store, user, workspaceI
     patch.paidCents = cents;
   }
   if ('paidDate' in data) patch.paidDate = typeof data.paidDate === 'string' && data.paidDate ? data.paidDate : null;
-  return json(await store.updateObligation(user.id, workspaceId, oid, version, patch));
+  return json(await store.updateObligation(user.id, workspaceId, oid, version, patch, requestToday(request)));
 }, { write: true });

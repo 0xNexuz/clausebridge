@@ -321,7 +321,7 @@ export class ClauseBridgeStore {
 
       if (decision.action === 'reject') {
         const reason = (decision.reason ?? '').trim().slice(0, 200);
-        await db.run("UPDATE suggestions SET status = 'rejected', decided_by = ?, decided_at = ? WHERE id = ?", [userId, timestamp, suggestionId]);
+        await this.claimSuggestion(db, suggestionId, 'rejected', userId, timestamp, null);
         await this.audit(db, workspaceId, userId, 'suggestion_rejected', 'suggestion', suggestionId, suggestion.contractId,
           `Rejected the suggested ${suggestion.kind} “${suggestion.title}” (${clauseLabel})`, { reason, quote: suggestion.quote });
         return { obligationId: null };
@@ -335,7 +335,7 @@ export class ClauseBridgeStore {
         const parties = parse<Party[]>(contract.parties_json, []).filter(party => party.name.toLowerCase() !== name.toLowerCase());
         parties.push({ name, role, clauseId: suggestion.clauseId, quote: suggestion.quote });
         await db.run('UPDATE contracts SET parties_json = ?, updated_at = ? WHERE id = ?', [json(parties), timestamp, contract.id]);
-        await db.run("UPDATE suggestions SET status = 'confirmed', decided_by = ?, decided_at = ? WHERE id = ?", [userId, timestamp, suggestionId]);
+        await this.claimSuggestion(db, suggestionId, 'confirmed', userId, timestamp, null);
         await this.audit(db, workspaceId, userId, 'party_confirmed', 'contract', contract.id, contract.id,
           `Confirmed ${name}${role ? ` (${role})` : ''} as a party to “${contract.title}”`, { name, role, quote: suggestion.quote });
         return { obligationId: null };
@@ -375,19 +375,19 @@ export class ClauseBridgeStore {
       }
       if (kind === 'payment' && amountCents === null) throw new StoreError('invalid', 'A payment needs an amount. Enter it from the contract before confirming.');
 
-      const workspace = await db.get<{ next_ref: number }>('SELECT next_ref FROM workspaces WHERE id = ?', [workspaceId]);
-      const refNumber = Number(workspace?.next_ref ?? 1);
-      const ref = `OB-${String(refNumber).padStart(3, '0')}`;
-      await db.run('UPDATE workspaces SET next_ref = ? WHERE id = ?', [refNumber + 1, workspaceId]);
       const obligationId = randomUUID();
+      await this.claimSuggestion(db, suggestionId, 'confirmed', userId, timestamp, obligationId);
+      // Increment first: on Postgres the row lock makes a concurrent confirmation wait and then take the next number.
+      await db.run('UPDATE workspaces SET next_ref = next_ref + 1 WHERE id = ?', [workspaceId]);
+      const workspace = await db.get<{ next_ref: number }>('SELECT next_ref FROM workspaces WHERE id = ?', [workspaceId]);
+      const refNumber = Number(workspace?.next_ref ?? 2) - 1;
+      const ref = `OB-${String(refNumber).padStart(3, '0')}`;
       await db.run(`INSERT INTO obligations (id, workspace_id, contract_id, suggestion_id, ref, kind, title, party, owner_id, due_date, due_text,
         due_source, amount_cents, currency, amount_source, paid_cents, paid_date, status, clause_id, quote, quote_start, quote_end, version,
         created_by, created_at, updated_at) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
         [obligationId, workspaceId, contract.id, suggestionId, ref, kind, title, party, edits.ownerId ?? null, dueDate,
           suggestion.due.text, dueSource, amountCents, currency, amountSource, 0, null, 'open', suggestion.clauseId, suggestion.quote,
           suggestion.quoteStart, suggestion.quoteEnd, 1, userId, timestamp, timestamp]);
-      await db.run("UPDATE suggestions SET status = 'confirmed', decided_by = ?, decided_at = ?, obligation_id = ? WHERE id = ?",
-        [userId, timestamp, obligationId, suggestionId]);
       const changed: string[] = [];
       if (title !== suggestion.title) changed.push('title');
       if (kind !== suggestion.kind) changed.push('type');
@@ -399,6 +399,16 @@ export class ClauseBridgeStore {
         { ref, suggestionId, changed, dueDate, dueSource, amountCents, currency, amountSource, quote: suggestion.quote });
       return { obligationId };
     });
+  }
+
+  /**
+   * Records the decision only if the suggestion is still pending. The status check is in the UPDATE itself, so
+   * two people deciding at once (on Postgres, where reads take no lock) cannot both succeed.
+   */
+  private async claimSuggestion(db: Db, suggestionId: string, status: 'confirmed' | 'rejected', userId: string, timestamp: string, obligationId: string | null) {
+    const changed = await db.run(`UPDATE suggestions SET status = ?, decided_by = ?, decided_at = ?, obligation_id = ?
+      WHERE id = ? AND status = 'pending'`, [status, userId, timestamp, obligationId, suggestionId]);
+    if (changed !== 1) throw new StoreError('conflict', 'This suggestion has already been decided');
   }
 
   private async assertMember(db: Db, workspaceId: string, userId: string) {
@@ -432,7 +442,8 @@ export class ClauseBridgeStore {
     };
   }
 
-  async updateObligation(userId: string, workspaceId: string, obligationId: string, version: number, patch: ObligationPatch) {
+  /** `today` is the caller's local date, used as the payment date when a payment is recorded without one. */
+  async updateObligation(userId: string, workspaceId: string, obligationId: string, version: number, patch: ObligationPatch, today = now().slice(0, 10)) {
     return this.db.tx(async db => {
       await this.role(userId, workspaceId, db);
       const row = await db.get<ObligationRow>(`${OBLIGATION_SELECT} WHERE o.workspace_id = ? AND o.id = ?`, [workspaceId, obligationId]);
@@ -473,16 +484,18 @@ export class ClauseBridgeStore {
         if (paid !== before.paidCents) changes.push(`paid ${formatMoney(before.paidCents, before.currency)} → ${formatMoney(paid, before.currency)}`);
         if (paidDate !== before.paidDate) changes.push(`paid on ${before.paidDate ? formatDate(before.paidDate) : 'none'} → ${paidDate ? formatDate(paidDate) : 'none'}`);
         after.paidCents = paid;
-        after.paidDate = paid > 0 ? (paidDate ?? now().slice(0, 10)) : null;
+        after.paidDate = paid > 0 ? (paidDate ?? today) : null;
         // A payment's status follows the money: fully paid is done; un-paying reopens it.
         if (paid === before.amountCents && after.status !== 'done') { after.status = 'done'; changes.push('status → Done (fully paid)'); }
         if (paid < before.amountCents && before.status === 'done' && patch.status === undefined) { after.status = 'open'; changes.push('status Done → Not started (not fully paid)'); }
       }
       if (!changes.length) return { obligation: before, changed: false };
       const timestamp = now();
-      await db.run(`UPDATE obligations SET status = ?, owner_id = ?, due_date = ?, due_source = ?, title = ?, paid_cents = ?, paid_date = ?,
-        version = ?, updated_at = ? WHERE id = ?`, [after.status, after.ownerId, after.dueDate, after.dueSource, after.title, after.paidCents,
-        after.paidDate, version + 1, timestamp, obligationId]);
+      // The version is checked again in the UPDATE: on Postgres a concurrent edit may commit after the read above.
+      const updated = await db.run(`UPDATE obligations SET status = ?, owner_id = ?, due_date = ?, due_source = ?, title = ?, paid_cents = ?, paid_date = ?,
+        version = ?, updated_at = ? WHERE id = ? AND version = ?`, [after.status, after.ownerId, after.dueDate, after.dueSource, after.title, after.paidCents,
+        after.paidDate, version + 1, timestamp, obligationId, version]);
+      if (updated !== 1) throw new StoreError('conflict', 'Someone else changed this obligation. Reload to see the latest.');
       await this.audit(db, workspaceId, userId, 'obligation_updated', 'obligation', obligationId, before.contractId,
         `Updated ${before.ref}: ${changes.join('; ')}`, { ref: before.ref, changes,
           before: { status: before.status, ownerId: before.ownerId, dueDate: before.dueDate, paidCents: before.paidCents, paidDate: before.paidDate, title: before.title },
@@ -568,8 +581,9 @@ export class ClauseBridgeStore {
       if (!row) throw new StoreError('not_found', 'Report not found');
       if (row.status === 'approved') throw new StoreError('conflict', 'This report is already approved. Draft a new one to report again.');
       const timestamp = now();
-      await db.run(`UPDATE reports SET status = 'approved', approved_text = ?, approved_facts_json = ?, text_sha256 = ?, approved_by = ?, approved_at = ?
-        WHERE id = ?`, [text, json(facts), sha256(text), userId, timestamp, reportId]);
+      const updated = await db.run(`UPDATE reports SET status = 'approved', approved_text = ?, approved_facts_json = ?, text_sha256 = ?, approved_by = ?, approved_at = ?
+        WHERE id = ? AND status = 'draft'`, [text, json(facts), sha256(text), userId, timestamp, reportId]);
+      if (updated !== 1) throw new StoreError('conflict', 'This report is already approved. Draft a new one to report again.');
       await this.audit(db, workspaceId, userId, 'report_approved', 'report', reportId, row.contract_id,
         `Approved the report “${row.title}” (${verifiedFigures} figures checked)`, { verifiedFigures, textSha256: sha256(text) });
       return { approvedAt: timestamp };
@@ -618,7 +632,7 @@ export class ClauseBridgeStore {
     await this.role(userId, workspaceId);
     return (await this.db.all<{ id: string; username: string; action: string; target_type: string; target_id: string; contract_id: string | null;
       summary: string; detail_json: string; created_at: string }>(`SELECT a.*, u.username FROM audit a JOIN users u ON u.id = a.actor_id
-      WHERE a.workspace_id = ? ORDER BY a.created_at DESC, a.id DESC LIMIT ?`, [workspaceId, Math.min(Math.max(limit, 1), 500)]))
+      WHERE a.workspace_id = ? ORDER BY a.created_at DESC, a.id DESC LIMIT ?`, [workspaceId, Math.min(Math.max(Math.trunc(limit) || 200, 1), 500)]))
       .map(row => ({ id: row.id, actor: row.username, action: row.action, targetType: row.target_type, targetId: row.target_id,
         contractId: row.contract_id, summary: row.summary, detail: parse(row.detail_json, {}), createdAt: row.created_at }));
   }
