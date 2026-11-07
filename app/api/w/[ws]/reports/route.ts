@@ -1,6 +1,7 @@
 import { antLingConfig } from '@/lib/server/ant-ling';
 import { body, json } from '@/lib/server/http';
 import { draftProgressReport } from '@/lib/server/report-draft';
+import { reportNames } from '@/lib/report';
 import { isId, requestToday, workspaceRoute } from '@/lib/server/route';
 import { StoreError } from '@/lib/server/store';
 import { createThrottle } from '@/lib/server/throttle';
@@ -25,7 +26,8 @@ export const POST = workspaceRoute(async (request, { store, user, workspaceId })
   if (contractId && !contract) throw new StoreError('not_found', 'Contract not found');
   const obligations = contract ? all.filter(ob => ob.contractId === contract.id) : all;
   if (!obligations.length) throw new StoreError('invalid', 'Confirm at least one obligation before drafting a report');
-  const workspaceName = workspaces.find(w => w.id === workspaceId)?.name ?? 'Workspace';
+  const workspace = workspaces.find(w => w.id === workspaceId);
+  const workspaceName = workspace?.name ?? 'Workspace';
   const title = `${contract ? contract.title : workspaceName}: progress report`;
   let config = null;
   try { config = antLingConfig(); } catch { config = null; }
@@ -33,7 +35,7 @@ export const POST = workspaceRoute(async (request, { store, user, workspaceId })
   let draft;
   try {
     draft = await draftProgressReport({ title, obligations, today, contractTitles, config,
-      allowedNames: [workspaceName, ...contracts.map(item => item.title), ...contracts.flatMap(item => item.parties.map(p => p.name))] });
+      allowedNames: reportNames({ workspaceName, contracts, members: workspace?.members, obligations }) });
   } catch {
     // Ant Ling unreachable: still produce the report with ClauseBridge's own summary.
     draft = await draftProgressReport({ title, obligations, today, contractTitles, config: null, allowedNames: [] });

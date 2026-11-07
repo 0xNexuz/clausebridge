@@ -1,4 +1,4 @@
-import { checkReport, draftFacts, factSheet, staleFacts, type ReportDraftContent } from '@/lib/report';
+import { checkReport, draftFacts, factSheet, reportNames, staleFacts, type ReportDraftContent } from '@/lib/report';
 import { body, json } from '@/lib/server/http';
 import { isId, requestToday, workspaceRoute, type Ctx } from '@/lib/server/route';
 import { StoreError } from '@/lib/server/store';
@@ -17,7 +17,7 @@ async function context(ctx: Ctx, reportId: string, today: string) {
   const facts = factSheet(obligations, asOf, new Map(contracts.map(item => [item.id, item.title])));
   const workspace = (await ctx.store.listWorkspaces(ctx.user.id)).find(item => item.id === ctx.workspaceId);
   // Names and ClauseBridge's own template wording may contain digits; they are not figures.
-  const allowed = [workspace?.name ?? '', 'next 30 days', ...contracts.map(item => item.title), ...contracts.flatMap(item => item.parties.map(p => p.name)), ...obligations.map(ob => ob.ref)];
+  const allowed = [...reportNames({ workspaceName: workspace?.name, contracts, members: workspace?.members, obligations }), 'next 30 days', ...obligations.map(ob => ob.ref)];
   return { report, facts, allowed, obligations };
 }
 

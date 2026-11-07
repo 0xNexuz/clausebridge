@@ -27,9 +27,9 @@ export default function Overview({ ctx }: { ctx: AppContext }) {
       <div className="stat-row">
         <div className={`stat ${d.counts.overdue ? 'red' : ''}`}><b>{d.counts.overdue}</b><span>overdue</span></div>
         <div className="stat"><b>{d.counts.dueSoon}</b><span>due in 30 days</span></div>
-        <div className="stat"><b>{d.counts.open}</b><span>open obligations</span></div>
+        <div className="stat"><b>{d.counts.open}</b><span>open obligation{d.counts.open === 1 ? '' : 's'}</span></div>
         <div className="stat"><b>{d.counts.done}</b><span>done</span></div>
-        <div className="stat"><b>{d.counts.pending}</b><span>suggestions to review</span></div>
+        <div className="stat"><b>{d.counts.pending}</b><span>suggestion{d.counts.pending === 1 ? '' : 's'} to review</span></div>
       </div>
       <div className="grid-3">
         <section className="card">

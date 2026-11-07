@@ -28,3 +28,31 @@ Append-only record of milestones (M), issues (I) and questions (Q).
 - **Request (owner):** merge four reference images into new artwork and design the full frontend and the internal tool, with smooth hover animations.
 - **Built:** see `docs/DESIGN.md`. Original artwork in code: torn-paper hero collage with a contract-page character whose eyes follow the cursor, a pixel-art reader with a laptop, a pixel couch scene for the 404 page, and a distressed vintage box of four highlighter pens whose colours are the four obligation kinds. Two references were other companies' property (a browser game's dinosaur; tobacco and software branding), so ClauseBridge uses original equivalents.
 - **Evidence:** screenshots in the PR.
+
+## M-004 — Vercel project (7 November 2026)
+- **Request (owner):** create the Vercel project with a short link.
+- **Done:** project `clausebridge` (team `xreyys-projects`) linked to `0xNexuz/clausebridge`, production branch `main`, framework Next.js, Node 24. First deployment built from PR #1's branch and is live at https://clausebridge.vercel.app (public, landing page served).
+- **Postgres check:** `tests/postgres.integration.mjs` run against a local PostgreSQL 16: migrations (twice), accounts, workspace privacy, invites, contract with file bytes, extraction save, confirm and reject, payments, evidence bytes, reports, calendar feed and append-only audit all pass.
+- **Owner to do:** add a Postgres database (Neon) to the project so `DATABASE_URL` is set, add `ANT_LING_API_KEY` (server only), then redeploy. Until then `/app` cannot store accounts.
+
+## I-001 — Report check flags digits in a person's name (7 November 2026)
+- **Found by:** the first live run on https://clausebridge.vercel.app with Ling 3.2 Flash. A workspace member named `live6t44ib` owned an obligation; the report line "owner live6t44ib" made the pre-approval check flag "6" and "44" as unverified figures, so approval was refused (409).
+- **Expected outcome:** names of workspace members and obligation owners, like contract titles and party names, are not treated as figures, while a number typed into the report is still flagged. Names with no letters are never exempted.
+
+## M-005 — Live check with the real Ling 3.2 Flash (7 November 2026)
+- **Request (owner):** the Neon database and `ANT_LING_API_KEY` are set on the Vercel project ("settings locked in"); run the full flow on https://clausebridge.vercel.app and add genuine screenshots to the README.
+- **How:** the build machine cannot reach vercel.app, so the checks ran from a Vercel Sandbox: an API script, then a real Chromium (headless, version 153) driving the UI. Synthetic test accounts only.
+- **API run (deployment with commit `117e232`, then `aeb51fe`):**
+  - AI status: connected, model `Ling-3.2-flash`.
+  - Website sample (effective date 3 Nov 2026): 17 suggestions, 0 dropped, 3,104 tokens, one request, 10.2 s. All 9 dates and all 4 amounts ClauseBridge read match the contract, including "within five (5) business days of the Effective Date" → 10 Nov 2026. Four terms were marked "check carefully" because the clause gives no date or depends on an event.
+  - Uploads on Vercel: the PDF gave 28 clauses, the Word file 21. Word contract (commencement 1 Oct 2026): 14 suggestions, 0 dropped, 2,608 tokens; its 5 dates and 2 NGN amounts match the contract.
+  - 27 obligations confirmed; deposit payment saved; status change, a note and a file added as evidence.
+  - Report: summary by Ling on the first attempt. The first run found I-001 (approval refused, 409). After the fix: check passes (30 figures), a typed "USD 2,500.00" is flagged and approval with it is refused (409), approval succeeds, and after marking OB-015 done the approved report lists the 4 figures that changed.
+  - Calendar feed: 14 events, 12 alarms (done items get none), `TRIGGER:-PT15H`. Audit: 45 entries.
+- **Browser run:** landing page, 404 page, account creation, contract in Univer Docs, Ling suggestions (18 this time, 13.6 s; the model's count varies between runs), 15 terms and 2 parties confirmed in the UI, overview, obligation drawer edit and note, register and payment schedule in Univer Sheets (formula totals match the cent check), report drafted with Ling's wording, checked and approved, team and history views. No console errors and no failed requests apart from the deliberate 404.
+  - Note for future runs: Chromium started with `--disable-web-security` sends no `Origin` header, so ClauseBridge's same-origin check refuses its writes (403). Normal browsers send it; the check stays as is.
+- **Fixed:** I-001 (`lib/report.ts` `reportNames`, used by both report routes; a short fact can no longer mask part of a longer number). Singular labels for "1 open obligation", "1 suggestion to review" and "suggested 1 term".
+- **Checks:** `npm test` 14/14 (new `tests/report.test.mjs`), `npm run typecheck` clean, `npm run build` passes.
+- **Screens:** `docs/screens/`. Captured from a local copy loaded with the live run's suggestions unchanged; the seed refused to load unless the contract text length, clause count and every quote position matched the live run. The report summary is Ling's wording from the live run, replayed through ClauseBridge's own validation; figures were filled in from the local copy, which mirrors the live state.
+- **Test data on the live database:** accounts `live6t44ib`, `tobip2f3`, `tobiqnkx` and `dbgoilj`, each with its own private workspace and the fictional samples. The owner can delete them.
+- **Open:** `ANT_LING_API_KEY` is set for Production only, so preview deployments run without AI. Ling's summary wording is checked for figures but not for meaning; people still read it before approving.
