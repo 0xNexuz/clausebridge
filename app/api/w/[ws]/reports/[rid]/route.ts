@@ -36,8 +36,9 @@ export const POST = workspaceRoute<P>(async (request, ctx, { rid }) => {
   if (!text.trim()) throw new StoreError('invalid', 'The report is empty');
   if (text.length > 40_000) throw new StoreError('invalid', 'The report is longer than 40,000 characters');
   const { report, facts, allowed } = await context(ctx, rid, requestToday(request));
-  const refs = draftFacts((report.draft as ReportDraftContent).blocks);
-  const check = checkReport(text, refs, facts, allowed);
+  const blocks = (report.draft as ReportDraftContent).blocks;
+  const refs = draftFacts(blocks);
+  const check = checkReport(text, blocks, facts, allowed);
   if (data.action === 'check') return json({ check });
   if (data.action !== 'approve') throw new StoreError('invalid', 'Unknown action');
   if (!check.ok) return json({ check, error: 'Fix the flagged figures before approving.' }, 409);

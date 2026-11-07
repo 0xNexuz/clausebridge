@@ -1,6 +1,6 @@
 import { parseMoneyInput } from '@/lib/contract/terms';
 import { body, json } from '@/lib/server/http';
-import { isId, workspaceRoute } from '@/lib/server/route';
+import { isId, requestToday, workspaceRoute } from '@/lib/server/route';
 import { StoreError } from '@/lib/server/store';
 
 export const runtime = 'nodejs';
@@ -14,6 +14,7 @@ export const POST = workspaceRoute(async (request, { store, user, workspaceId })
   const data = await body(request);
   if (!Array.isArray(data.rows) || data.rows.length > 300) throw new StoreError('invalid', 'No payment rows to save');
   const results: { id: string; ref: string; changed: boolean; error?: string }[] = [];
+  const today = requestToday(request);
   for (const item of data.rows as Record<string, unknown>[]) {
     if (!isId(item?.id)) throw new StoreError('invalid', 'Malformed payment row');
     const version = Number(item.version);
@@ -22,7 +23,7 @@ export const POST = workspaceRoute(async (request, { store, user, workspaceId })
     if (paid === null) { results.push({ id: item.id, ref, changed: false, error: 'Paid is not a number' }); continue; }
     const paidDate = typeof item.paidDate === 'string' && item.paidDate ? item.paidDate : null;
     try {
-      const result = await store.updateObligation(user.id, workspaceId, item.id, version, { paidCents: paid, paidDate });
+      const result = await store.updateObligation(user.id, workspaceId, item.id, version, { paidCents: paid, paidDate }, today);
       results.push({ id: item.id, ref, changed: result.changed });
     } catch (error) {
       if (error instanceof StoreError && error.code !== 'not_found') results.push({ id: item.id, ref, changed: false, error: error.message });

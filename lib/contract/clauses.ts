@@ -49,7 +49,9 @@ export function clauseMarker(paragraph: string): { ref: string; label: string; l
 }
 
 function cleanLine(line: string) {
-  return line.replace(/[   \t]/g, ' ').replace(/[​﻿]/g, '').replace(/ {2,}/g, ' ').trim();
+  // Control characters (form feeds, DOS end-of-file marks and the like) are not contract text, and Univer Docs
+  // reads several of them as structure (a table start hides the paragraph around it).
+  return line.replace(/[   \t\x00-\x08\x0B-\x1F\x7F]/g, ' ').replace(/[​﻿]/g, '').replace(/ {2,}/g, ' ').trim();
 }
 
 /**

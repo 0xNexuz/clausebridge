@@ -2,8 +2,8 @@ import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { NextRequest } from 'next/server';
 import { normalizeContractText, splitClauses } from '@/lib/contract/clauses';
-import { extractContractText } from '@/lib/server/files';
-import { json } from '@/lib/server/http';
+import { extractContractText, formDataLimited } from '@/lib/server/files';
+import { body, json } from '@/lib/server/http';
 import { workspaceRoute } from '@/lib/server/route';
 import { MAX_CONTRACT_FILE_BYTES, StoreError } from '@/lib/server/store';
 
@@ -26,9 +26,7 @@ export const POST = workspaceRoute(async (request: NextRequest, { store, user, w
   let kind = 'txt';
   let bytes: Buffer | null = null;
   if (request.headers.get('content-type')?.startsWith('multipart/form-data')) {
-    const declared = Number(request.headers.get('content-length') ?? 0);
-    if (declared > MAX_CONTRACT_FILE_BYTES + 64_000) throw new StoreError('invalid', 'Contract files can be up to 4 MB');
-    const form = await request.formData();
+    const form = await formDataLimited(request, MAX_CONTRACT_FILE_BYTES + 64_000, 'Contract files can be up to 4 MB');
     const file = form.get('file');
     if (!file || typeof file === 'string') throw new StoreError('invalid', 'Choose a contract file to upload');
     if (file.size > MAX_CONTRACT_FILE_BYTES) throw new StoreError('invalid', 'Contract files can be up to 4 MB');
@@ -39,7 +37,7 @@ export const POST = workspaceRoute(async (request: NextRequest, { store, user, w
     kind = extracted.kind;
     title = String(form.get('title') ?? '').trim();
   } else {
-    const data = await request.json() as { sample?: unknown };
+    const data = await body(request);
     const sample = typeof data.sample === 'string' ? SAMPLES[data.sample] : undefined;
     if (!sample) throw new StoreError('invalid', 'Unknown sample contract');
     raw = await readFile(path.join(process.cwd(), 'data', 'samples', sample.file), 'utf8');

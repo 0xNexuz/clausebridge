@@ -6,7 +6,10 @@ import { formatMoney } from './contract/terms.ts';
 import { STATUS_LABEL, type Obligation } from './types.ts';
 
 function escapeText(value: string) {
-  return value.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n');
+  // A bare CR would end the content line early (and let a title inject calendar properties); other control
+  // characters are not allowed in TEXT values.
+  return value.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r\n|\r|\n/g, '\\n')
+    .replace(/[\x00-\x08\x0B-\x1F\x7F]/g, '');
 }
 
 /** Folds content lines at 75 octets as the standard requires. */

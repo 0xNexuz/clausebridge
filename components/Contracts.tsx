@@ -4,6 +4,7 @@ import { useRef, useState } from 'react';
 import { api, errorText } from '@/lib/api';
 import { formatDate } from '@/lib/contract/terms';
 import type { AppContext } from './App';
+import { localDay } from './Bits';
 
 const SAMPLES = [
   { id: 'website-redesign', title: 'Website Redesign Services Agreement', note: 'Agency and restaurant group, USD payments' },
@@ -57,7 +58,7 @@ export default function Contracts({ ctx }: { ctx: AppContext }) {
               <div className="hint">Up to 4 MB. Scanned PDFs without selectable text aren’t supported yet.</div>
             </div>
             <div className="row">
-              <input className="input" placeholder="Title (optional)" value={title} onChange={e => setTitle(e.target.value)} style={{ width: 200 }} />
+              <input className="input" aria-label="Contract title (optional)" placeholder="Title (optional)" value={title} onChange={e => setTitle(e.target.value)} style={{ width: 200 }} />
               <button className="btn primary" disabled={Boolean(busy)} onClick={() => input.current?.click()}>Choose file</button>
               <input ref={input} type="file" accept=".pdf,.docx,.txt,.md,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain" hidden
                 onChange={e => { const file = e.target.files?.[0]; e.target.value = ''; if (file) void upload(file); }} />
@@ -79,7 +80,7 @@ export default function Contracts({ ctx }: { ctx: AppContext }) {
             <div>
               <h3>{contract.title}</h3>
               <p>{contract.parties.length ? contract.parties.map(p => `${p.name}${p.role ? ` (${p.role})` : ''}`).join(' and ') : 'Parties not confirmed yet'}</p>
-              <p>{contract.fileName} · added by {contract.uploadedBy} on {formatDate(contract.createdAt.slice(0, 10))}{contract.effectiveDate ? ` · effective ${formatDate(contract.effectiveDate)}` : ''}</p>
+              <p>{contract.fileName} · added by {contract.uploadedBy} on {formatDate(localDay(contract.createdAt))}{contract.effectiveDate ? ` · effective ${formatDate(contract.effectiveDate)}` : ''}</p>
             </div>
             <div className="row">
               {contract.pending > 0 && <span className="count">{contract.pending} to review</span>}

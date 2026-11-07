@@ -37,9 +37,15 @@ export function ObligationRow({ ob, today, onOpen }: { ob: Obligation; today: st
   );
 }
 
+/** The viewer's local calendar day of a timestamp, as YYYY-MM-DD (the stored timestamps are UTC). */
+export function localDay(iso: string) {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
 export function when(iso: string) {
   const d = new Date(iso);
-  return `${formatDate(iso.slice(0, 10))}, ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${formatDate(localDay(iso))}, ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 }
 
 /** Audit summaries read after the actor's name: "amara confirmed OB-001 …". */

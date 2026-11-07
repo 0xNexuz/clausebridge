@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { api, errorText } from '@/lib/api';
 import { formatDate } from '@/lib/contract/terms';
 import type { AppContext } from './App';
-import { ObligationRow } from './Bits';
+import { localDay, ObligationRow } from './Bits';
 
 export default function Team({ ctx, onWorkspaces }: { ctx: AppContext; onWorkspaces: (prefer?: string) => Promise<void> }) {
   const [invite, setInvite] = useState<{ code: string; expiresAt: string } | null>(null);
@@ -32,7 +32,7 @@ export default function Team({ ctx, onWorkspaces }: { ctx: AppContext; onWorkspa
           <p className="hint" style={{ marginTop: 0 }}>Subscribe to a private calendar link in Google Calendar, Apple Calendar or Outlook. Each due date appears as an all-day event with an alert the day before. It covers your obligations and unowned ones across your workspaces.</p>
           {calendar.url ? (
             <>
-              <input className="input" readOnly value={calendar.url} onFocus={e => e.target.select()} style={{ width: '100%' }} />
+              <input className="input" aria-label="Private calendar link" readOnly value={calendar.url} onFocus={e => e.target.select()} style={{ width: '100%' }} />
               <p className="hint">Copy it now; it is shown only once. Anyone with the link can see the due dates, so keep it private.</p>
             </>
           ) : (
@@ -47,11 +47,11 @@ export default function Team({ ctx, onWorkspaces }: { ctx: AppContext; onWorkspa
           <ul className="attention">{ctx.workspace.members.map(m => <li key={m.userId} style={{ fontSize: 14 }}>{m.username}{m.userId === ctx.user.id ? ' (you)' : ''} · {m.role}</li>)}</ul>
           <h2 style={{ marginTop: 16 }}>Invite a teammate</h2>
           {invite ? (
-            <p className="notice">Invite code <b style={{ letterSpacing: '.08em' }}>{invite.code}</b>, valid until {formatDate(invite.expiresAt.slice(0, 10))}. They enter it under “Join a workspace”.</p>
+            <p className="notice">Invite code <b style={{ letterSpacing: '.08em' }}>{invite.code}</b>, valid until {formatDate(localDay(invite.expiresAt))}. They enter it under “Join a workspace”.</p>
           ) : <button className="btn" onClick={() => act(async () => setInvite(await api(`/api/workspaces`, { json: { action: 'invite', workspaceId: ctx.workspace.id } })))}>Create an invite code</button>}
           <h2 style={{ marginTop: 16 }}>Join a workspace</h2>
           <div className="row">
-            <input className="input" placeholder="8-character code" value={code} onChange={e => setCode(e.target.value)} maxLength={8} style={{ width: 150, textTransform: 'uppercase' }} />
+            <input className="input" aria-label="Invite code" placeholder="8-character code" value={code} onChange={e => setCode(e.target.value)} maxLength={8} style={{ width: 150, textTransform: 'uppercase' }} />
             <button className="btn" disabled={code.trim().length !== 8} onClick={() => act(async () => {
               const result = await api<{ workspaceId: string }>('/api/workspaces', { json: { action: 'join', code } });
               setCode(''); await onWorkspaces(result.workspaceId); setMessage('Joined. The workspace is selected.');
@@ -59,7 +59,7 @@ export default function Team({ ctx, onWorkspaces }: { ctx: AppContext; onWorkspa
           </div>
           <h2 style={{ marginTop: 16 }}>New workspace</h2>
           <div className="row">
-            <input className="input" placeholder="Name" value={name} onChange={e => setName(e.target.value)} maxLength={60} />
+            <input className="input" aria-label="New workspace name" placeholder="Name" value={name} onChange={e => setName(e.target.value)} maxLength={60} />
             <button className="btn" disabled={!name.trim()} onClick={() => act(async () => {
               const result = await api<{ workspaceId: string }>('/api/workspaces', { json: { action: 'create', name } });
               setName(''); await onWorkspaces(result.workspaceId);

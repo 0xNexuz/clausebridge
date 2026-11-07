@@ -70,3 +70,23 @@ test('reads relative timing and resolves it from the effective date', () => {
   assert.equal(findRecurrence('a written status report on the first business day of each month'), 'on the first business day of each month');
   assert.equal(addTiming('2027-01-31', { amount: 1, unit: 'month', direction: 'after' }), '2027-02-28');
 });
+
+test('an amount is read only when its number ends there, so other number formats are never misread', () => {
+  assert.deepEqual(findAmounts('a fee of EUR 1.234,56'), [], 'European format is left for a person, not read as EUR 1.23');
+  assert.deepEqual(findAmounts('USD 4,500.555 and $1,2345'), [], 'not read as USD 4,500.55 or $1,234');
+  assert.deepEqual(findAmounts('pay USD 4,500. Then $2.5k, then ₦3m.').map(a => [a.cents, a.currency]), [[450000, 'USD'], [250000, 'USD'], [300000000, 'NGN']]);
+});
+
+test('a JSON number means the same as typed text, not cents', () => {
+  assert.equal(parseMoneyInput(4500), 450000);
+  assert.equal(parseMoneyInput(4500.5), 450050);
+  assert.equal(parseMoneyInput('4500'), parseMoneyInput(4500));
+  assert.equal(parseMoneyInput(0.1 + 0.2), null, 'more than two decimals is refused');
+  assert.equal(parseMoneyInput(-5), null);
+  assert.equal(parseMoneyInput(Number.NaN), null);
+});
+
+test('control characters are removed from contract text', () => {
+  const text = normalizeContractText('1. Payment\n1.1 The Client shall pay USD 4,500 within seven (7) days.\x1aLate fees apply.\f\n\x0c2\n1.2 Next\x0bclause.');
+  assert.equal(text, '1. Payment\n1.1 The Client shall pay USD 4,500 within seven (7) days. Late fees apply.\n1.2 Next clause.');
+});
