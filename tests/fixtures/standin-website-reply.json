@@ -1,0 +1,186 @@
+{
+ "parties": [
+  {
+   "name": "Harbor & Pine Foods Ltd",
+   "role": "Client",
+   "clause": "c1",
+   "quote": "Harbor & Pine Foods Ltd, a company registered in Lagos, Nigeria (the \"Client\")"
+  },
+  {
+   "name": "Brightline Studio Ltd",
+   "role": "Agency",
+   "clause": "c1",
+   "quote": "Brightline Studio Ltd, a design agency registered in Accra, Ghana (the \"Agency\")"
+  }
+ ],
+ "items": [
+  {
+   "kind": "deadline",
+   "title": "Name a project lead and notify the Client",
+   "party": "Brightline Studio Ltd",
+   "clause": "c4",
+   "quote": "The Agency shall name a project lead and notify the Client of that person within five (5) business days of the Effective Date.",
+   "due": "",
+   "due_text": "within five (5) business days of the Effective Date",
+   "amount": "",
+   "confidence": "high",
+   "reason": "Dated action at project start."
+  },
+  {
+   "kind": "deliverable",
+   "title": "Deliver the discovery report",
+   "party": "Brightline Studio Ltd",
+   "clause": "c6",
+   "quote": "The Agency shall deliver a discovery report summarising user research and site analytics by 20 November 2026.",
+   "due": "2026-11-20",
+   "due_text": "by 20 November 2026",
+   "amount": "",
+   "confidence": "high",
+   "reason": "Deliverable with a fixed date."
+  },
+  {
+   "kind": "deliverable",
+   "title": "Provide page copy, photos and brand assets",
+   "party": "Harbor & Pine Foods Ltd",
+   "clause": "c7",
+   "quote": "The Client shall provide all final page copy, product photographs and brand assets no later than 27 November 2026.",
+   "due": "2026-11-27",
+   "due_text": "no later than 27 November 2026",
+   "amount": "",
+   "confidence": "high",
+   "reason": "Client input needed on a date."
+  },
+  {
+   "kind": "deliverable",
+   "title": "Deliver the design mockups",
+   "party": "Brightline Studio Ltd",
+   "clause": "c8",
+   "quote": "The Agency shall deliver high-fidelity design mockups for the home, menu, locations and contact pages by 11 December 2026.",
+   "due": "2026-12-11",
+   "due_text": "by 11 December 2026",
+   "amount": "",
+   "confidence": "high",
+   "reason": "Key design deliverable."
+  },
+  {
+   "kind": "deadline",
+   "title": "Approve the mockups or request changes",
+   "party": "Harbor & Pine Foods Ltd",
+   "clause": "c9",
+   "quote": "The Client shall approve the design mockups or request changes within ten (10) business days of receiving them.",
+   "due": "",
+   "due_text": "within ten (10) business days of receiving them",
+   "amount": "",
+   "confidence": "high",
+   "reason": "Review window after delivery."
+  },
+  {
+   "kind": "deliverable",
+   "title": "Launch the completed website",
+   "party": "Brightline Studio Ltd",
+   "clause": "c10",
+   "quote": "The Agency shall launch the completed website on the Client's hosting by 29 January 2027.",
+   "due": "2027-01-29",
+   "due_text": "by 29 January 2027",
+   "amount": "",
+   "confidence": "high",
+   "reason": "Launch date."
+  },
+  {
+   "kind": "payment",
+   "title": "Pay the deposit",
+   "party": "Harbor & Pine Foods Ltd",
+   "clause": "c13",
+   "quote": "The Client shall pay a deposit of USD 4,500 within seven (7) days of the Effective Date.",
+   "due": "",
+   "due_text": "within seven (7) days of the Effective Date",
+   "amount": "USD 4,500",
+   "confidence": "high",
+   "reason": "First payment."
+  },
+  {
+   "kind": "payment",
+   "title": "Pay the design-stage instalment",
+   "party": "Harbor & Pine Foods Ltd",
+   "clause": "c14",
+   "quote": "The Client shall pay USD 6,000 on 18 December 2026, following delivery of the design mockups.",
+   "due": "2026-12-18",
+   "due_text": "on 18 December 2026",
+   "amount": "USD 6,000",
+   "confidence": "high",
+   "reason": "Second payment."
+  },
+  {
+   "kind": "payment",
+   "title": "Pay the final instalment",
+   "party": "Harbor & Pine Foods Ltd",
+   "clause": "c15",
+   "quote": "The Client shall pay the final instalment of USD 4,500 by 12 February 2027.",
+   "due": "2027-02-12",
+   "due_text": "by 12 February 2027",
+   "amount": "USD 4,500",
+   "confidence": "high",
+   "reason": "Final payment."
+  },
+  {
+   "kind": "responsibility",
+   "title": "Fix reported defects within two business days",
+   "party": "Brightline Studio Ltd",
+   "clause": "c18",
+   "quote": "For three (3) months after launch the Agency shall fix reported defects within two (2) business days of each report.",
+   "due": "",
+   "due_text": "within two (2) business days of each report",
+   "amount": "",
+   "confidence": "high",
+   "reason": "Support duty after launch."
+  },
+  {
+   "kind": "deadline",
+   "title": "Renew the domain and hosting",
+   "party": "Harbor & Pine Foods Ltd",
+   "clause": "c19",
+   "quote": "The Client shall renew its domain name and hosting plan before they expire on 31 March 2027.",
+   "due": "2027-03-31",
+   "due_text": "before they expire on 31 March 2027",
+   "amount": "",
+   "confidence": "high",
+   "reason": "Renewal before expiry."
+  },
+  {
+   "kind": "deliverable",
+   "title": "Send the monthly status report",
+   "party": "Brightline Studio Ltd",
+   "clause": "c21",
+   "quote": "The Agency shall send the Client a written status report on the first business day of each month.",
+   "due": "",
+   "due_text": "on the first business day of each month",
+   "amount": "",
+   "confidence": "high",
+   "reason": "Recurring report."
+  },
+  {
+   "kind": "responsibility",
+   "title": "Maintain professional indemnity insurance",
+   "party": "Brightline Studio Ltd",
+   "clause": "c23",
+   "quote": "The Agency shall maintain professional indemnity insurance of at least USD 250,000 for the duration of this Agreement.",
+   "due": "",
+   "due_text": "for the duration of this Agreement",
+   "amount": "USD 250,000",
+   "confidence": "high",
+   "reason": "Ongoing insurance duty."
+  },
+  {
+   "kind": "payment",
+   "title": "Pay a launch bonus",
+   "party": "Harbor & Pine Foods Ltd",
+   "clause": "c15",
+   "quote": "The Client shall pay a launch bonus of USD 1,000 on launch day.",
+   "due": "2027-01-29",
+   "due_text": "",
+   "amount": "USD 1,000",
+   "confidence": "low",
+   "reason": "Invented to test grounding."
+  }
+ ]
+}

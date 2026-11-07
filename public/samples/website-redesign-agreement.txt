@@ -1,0 +1,43 @@
+WEBSITE REDESIGN SERVICES AGREEMENT
+
+This Website Redesign Services Agreement (the "Agreement") is made on 3 November 2026 (the "Effective Date") between Harbor & Pine Foods Ltd, a company registered in Lagos, Nigeria (the "Client"), and Brightline Studio Ltd, a design agency registered in Accra, Ghana (the "Agency").
+
+1. Services
+1.1 The Agency will redesign and rebuild the Client's public website as described in Schedule A (the "Services").
+1.2 The Agency shall name a project lead and notify the Client of that person within five (5) business days of the Effective Date.
+
+2. Deliverables and Timeline
+2.1 The Agency shall deliver a discovery report summarising user research and site analytics by 20 November 2026.
+2.2 The Client shall provide all final page copy, product photographs and brand assets no later than 27 November 2026.
+2.3 The Agency shall deliver high-fidelity design mockups for the home, menu, locations and contact pages by 11 December 2026.
+2.4 The Client shall approve the design mockups or request changes within ten (10) business days of receiving them.
+2.5 The Agency shall launch the completed website on the Client's hosting by 29 January 2027.
+
+3. Fees and Payment
+3.1 The total fee for the Services is USD 15,000.
+3.2 The Client shall pay a deposit of USD 4,500 within seven (7) days of the Effective Date.
+3.3 The Client shall pay USD 6,000 on 18 December 2026, following delivery of the design mockups.
+3.4 The Client shall pay the final instalment of USD 4,500 by 12 February 2027.
+3.5 Invoices are payable by bank transfer. Late payments carry interest of 1.5% per month.
+
+4. Support and Hosting
+4.1 For three (3) months after launch the Agency shall fix reported defects within two (2) business days of each report.
+4.2 The Client shall renew its domain name and hosting plan before they expire on 31 March 2027.
+
+5. Reporting
+5.1 The Agency shall send the Client a written status report on the first business day of each month.
+
+6. Insurance
+6.1 The Agency shall maintain professional indemnity insurance of at least USD 250,000 for the duration of this Agreement.
+
+7. Termination
+7.1 Either party may terminate this Agreement by giving thirty (30) days' written notice to the other party.
+
+8. Governing Law
+8.1 This Agreement is governed by the laws of the Federal Republic of Nigeria.
+
+Schedule A - Scope of Services
+The new website will include a home page, a menu page with online ordering links, a locations page for the Client's four restaurants and a contact form. The Agency will build the site on the Client's existing hosting and hand over editing access and a short training session at launch.
+
+Signed for Harbor & Pine Foods Ltd: Adaeze Okafor, Operations Director
+Signed for Brightline Studio Ltd: Kwame Mensah, Managing Director
