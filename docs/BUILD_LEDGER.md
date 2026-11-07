@@ -34,3 +34,7 @@ Append-only record of milestones (M), issues (I) and questions (Q).
 - **Done:** project `clausebridge` (team `xreyys-projects`) linked to `0xNexuz/clausebridge`, production branch `main`, framework Next.js, Node 24. First deployment built from PR #1's branch and is live at https://clausebridge.vercel.app (public, landing page served).
 - **Postgres check:** `tests/postgres.integration.mjs` run against a local PostgreSQL 16: migrations (twice), accounts, workspace privacy, invites, contract with file bytes, extraction save, confirm and reject, payments, evidence bytes, reports, calendar feed and append-only audit all pass.
 - **Owner to do:** add a Postgres database (Neon) to the project so `DATABASE_URL` is set, add `ANT_LING_API_KEY` (server only), then redeploy. Until then `/app` cannot store accounts.
+
+## I-001 — Report check flags digits in a person's name (7 November 2026)
+- **Found by:** the first live run on https://clausebridge.vercel.app with Ling 3.2 Flash. A workspace member named `live6t44ib` owned an obligation; the report line "owner live6t44ib" made the pre-approval check flag "6" and "44" as unverified figures, so approval was refused (409).
+- **Expected outcome:** names of workspace members and obligation owners, like contract titles and party names, are not treated as figures, while a number typed into the report is still flagged. Names with no letters are never exempted.

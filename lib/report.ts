@@ -153,6 +153,17 @@ export function validateSummary(raw: string, facts: Map<string, Fact>, allowedNa
   return { ok: true, paragraphs, used: [...used] };
 }
 
+/**
+ * Names that may contain digits but are not figures: the workspace, contract titles, parties, members and
+ * obligation owners. A name with no letters is left out, so it can never hide a typed number.
+ */
+export function reportNames(input: { workspaceName?: string | null; contracts: { title: string; parties: { name: string }[] }[];
+  members?: { username: string }[]; obligations?: Obligation[] }): string[] {
+  const names = [input.workspaceName ?? '', ...input.contracts.map(item => item.title), ...input.contracts.flatMap(item => item.parties.map(p => p.name)),
+    ...(input.members ?? []).map(m => m.username), ...(input.obligations ?? []).map(ob => ob.ownerName ?? '')];
+  return [...new Set(names.map(name => name.trim()).filter(name => /\p{L}/u.test(name)))];
+}
+
 export function blockText(block: Block) {
   return block.segments.map(segment => segment.text).join('');
 }
@@ -175,7 +186,8 @@ export type ReportCheck = {
 
 function escape(value: string) { return value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
 function whole(value: string, flags = 'g') {
-  return new RegExp(`(?<![\\p{L}\\p{N}.])${escape(value)}(?![\\p{L}\\p{N}]|\\.\\p{N})`, `${flags}u`);
+  // Not inside a longer word or number: "2" must not match the start of "2,500.00".
+  return new RegExp(`(?<![\\p{L}\\p{N}.]|\\p{N},)${escape(value)}(?![\\p{L}\\p{N}]|[.,]\\p{N})`, `${flags}u`);
 }
 function contextAround(source: string, index: number, length: number) {
   const start = Math.max(0, index - 40);
