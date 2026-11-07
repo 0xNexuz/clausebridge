@@ -8,6 +8,10 @@ ClauseBridge supports contract administration. It does not replace legal review 
 
 Built with the [Univer](https://univer.ai) SDK 1.3.1 and [Ant Ling](https://ant-ling.com)'s Ling 3.2 Flash. The original proposal is in [`docs/PROPOSAL.md`](docs/PROPOSAL.md); [`docs/CLIENT_SCOPE.md`](docs/CLIENT_SCOPE.md) maps every line of it to the feature that meets it.
 
+**Live:** https://clausebridge.vercel.app (create an account, then try one of the two sample contracts).
+
+![ClauseBridge landing page: a torn-paper collage of a contract page with a highlighted clause, a box of four highlighter pens and a pixel-art reader](docs/screens/landing.jpg)
+
 ## What you can do
 
 - **Upload a contract**: a text-based PDF, a Word `.docx` or a text file, up to 4 MB. ClauseBridge extracts the text, splits it into numbered clauses and opens it in Univer Docs. Two fictional sample contracts are built in.
@@ -20,6 +24,30 @@ Built with the [Univer](https://univer.ai) SDK 1.3.1 and [Ant Ling](https://ant-
 - **Work as a team**: shared workspaces with invite codes.
 - **Get reminders**: an in-app list of what is overdue or due this week, and a private calendar link (Google, Apple or Outlook) with an alert the day before each due date.
 - **Audit everything**: an append-only history of uploads, AI runs, confirmations, rejections, changes, payments, evidence and approvals.
+
+## Screens
+
+The terms below are the ones Ling 3.2 Flash suggested for the sample website contract on the live site on 7 November 2026, and the report summary is the wording it wrote in the same run. The screens were captured from a local copy loaded with that output unchanged (same contract text, clause numbers and quote positions), so the obligation references and figures match the live run. The sample contracts are fictional.
+
+**Contract review in Univer Docs.** Each suggestion shows the exact sentence it came from; clicking it selects that sentence in the contract. The due date here was worked out from the effective date, counting business days.
+
+![Contract review: the contract in Univer Docs with highlighted clauses, and Ling's suggestions with their checks beside it](docs/screens/contract-review.jpg)
+
+**Overview.** Only confirmed obligations are tracked: what is overdue or due soon, outstanding money per currency, and what needs attention.
+
+![Overview with overdue and upcoming obligations, outstanding payments in NGN and USD, and a list of items that need attention](docs/screens/overview.jpg)
+
+**An obligation.** Status, owner, due date and evidence, with the contract wording it came from.
+
+![Obligation drawer for OB-014 with the source clause, status set to In progress and a note added as evidence](docs/screens/obligation.jpg)
+
+**Payment schedule in Univer Sheets.** Totals are Univer formulas; ClauseBridge re-checks them to the cent.
+
+![Payment schedule sheet with paid and outstanding amounts and per-currency totals, and a confirmation that the formula totals match](docs/screens/payments.jpg)
+
+**Progress report in Univer Docs.** Ling wrote the summary using fact tokens only; every tinted figure, date, status and clause reference was filled in by ClauseBridge and checked before approval.
+
+![Progress report in Univer Docs with the summary paragraph, tinted figures and a check showing that the figures match current records](docs/screens/report.jpg)
 
 ## How the AI is kept honest
 

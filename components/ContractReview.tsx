@@ -129,7 +129,7 @@ export default function ContractReview({ ctx, contractId }: { ctx: AppContext; c
             </div>
             {tab === 'pending' && extraction && (
               <p className="hint" style={{ margin: 0 }}>
-                {extraction.model ?? 'Ling'} suggested {extraction.suggested} terms on {formatDate(extraction.ranAt.slice(0, 10))}.
+                {extraction.model ?? 'Ling'} suggested {extraction.suggested} term{extraction.suggested === 1 ? '' : 's'} on {formatDate(extraction.ranAt.slice(0, 10))}.
                 {extraction.dropped.length > 0 && ` ${extraction.dropped.length} were dropped because their quoted words were not in the contract.`}
                 {' '}Highlighted text in the contract is waiting for review; green is tracked.
               </p>
