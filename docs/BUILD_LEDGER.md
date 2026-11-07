@@ -28,3 +28,9 @@ Append-only record of milestones (M), issues (I) and questions (Q).
 - **Request (owner):** merge four reference images into new artwork and design the full frontend and the internal tool, with smooth hover animations.
 - **Built:** see `docs/DESIGN.md`. Original artwork in code: torn-paper hero collage with a contract-page character whose eyes follow the cursor, a pixel-art reader with a laptop, a pixel couch scene for the 404 page, and a distressed vintage box of four highlighter pens whose colours are the four obligation kinds. Two references were other companies' property (a browser game's dinosaur; tobacco and software branding), so ClauseBridge uses original equivalents.
 - **Evidence:** screenshots in the PR.
+
+## M-004 — Vercel project (7 November 2026)
+- **Request (owner):** create the Vercel project with a short link.
+- **Done:** project `clausebridge` (team `xreyys-projects`) linked to `0xNexuz/clausebridge`, production branch `main`, framework Next.js, Node 24. First deployment built from PR #1's branch and is live at https://clausebridge.vercel.app (public, landing page served).
+- **Postgres check:** `tests/postgres.integration.mjs` run against a local PostgreSQL 16: migrations (twice), accounts, workspace privacy, invites, contract with file bytes, extraction save, confirm and reject, payments, evidence bytes, reports, calendar feed and append-only audit all pass.
+- **Owner to do:** add a Postgres database (Neon) to the project so `DATABASE_URL` is set, add `ANT_LING_API_KEY` (server only), then redeploy. Until then `/app` cannot store accounts.

@@ -64,6 +64,7 @@ Without configuration ClauseBridge stores data in a private SQLite file under `.
 
 ```bash
 npm test               # parsing, grounding, store, payments, reminders and calendar feed
+DATABASE_URL=postgres://user@127.0.0.1:5432/scratch npm run test:postgres   # the hosted (Postgres) store
 npm run typecheck
 npm run build
 ```
