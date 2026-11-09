@@ -51,9 +51,3 @@ Univer Slides or Docs could present progress reports. ClauseBridge would
 supply the extraction pipeline, human review, reminders and audit
 history around these tools.
 
-## Proposed collaboration
-
-For a collaboration, I would deliver a functional application, the
-GitHub repository and setup guide, an end-to-end demonstration, and
-public build updates on X. I would also welcome Univer's advice on
-document features and commercial licensing.
