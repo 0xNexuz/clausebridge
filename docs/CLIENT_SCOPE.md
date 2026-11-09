@@ -21,10 +21,3 @@
 | Univer Slides or Docs: progress reports | Univer Docs. |
 | Extraction pipeline, human review, reminders and audit history | All four, with reminders in the app and as a calendar feed (.ics) with alerts. |
 
-## To agree with the client
-- Whether ClauseBridge may be publicly demoed and posted on X.
-- Which Univer licence edition, features and authorised domains apply to ClauseBridge's deployment.
-- Whether Ant Ling may process uploaded contract text in the deployed app.
-- Who supplies test users, real (anonymised) contracts and final sign-off.
-
-Do not record licence keys, API keys or private contracts in this repository.
