@@ -117,4 +117,8 @@ docs/                Proposal, scope, build ledger and design notes
 - Dates written as numbers (05/02/2027) are read day first and flagged for checking.
 - ClauseBridge does not interpret the law, judge whether terms are fair or enforceable, or give legal advice.
 
+## Licence
+
+[MIT](LICENSE). Univer and the other libraries ClauseBridge uses keep their own licences.
+
 Built by 0xNexuz.
